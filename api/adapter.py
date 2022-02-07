@@ -2,37 +2,41 @@
 from datetime import datetime, timedelta
 import requests
 
+from rest_framework.exceptions import NotFound
+
+from weather.settings import APPID
+
 
 def open_weather_retrieve(country, city):
     """Retrieve the data from Open Weather"""
 
-    appid = "1508a9a4840a5574c822d70ca2132032"
-
     weather_data = OpenWeatherAdapter()
 
-    # Weather data
     weather_url = "http://api.openweathermap.org/data/2.5/weather"
+    forecast_url = "http://api.openweathermap.org/data/2.5/onecall"
+
+    # Weather data
     try:
         weather_resp = requests.get(weather_url, {'q': ','.join([city, country]),
-                                                  'appid': appid})
+                                                  'appid': APPID})
     except requests.exceptions.RequestException as e:
         raise e.response.text
 
     # Forecast data
-    today_weather_data = weather_data.today_weather(weather_resp.json())
-    if 'geo_coordinates' in today_weather_data:
-        lat, lon = today_weather_data['geo_coordinates']
-    else:
-        return {"message": "No coordinates"}
+    today_weather_data = weather_resp.json()
+    try:
+        lon = today_weather_data['coord']['lon']
+        lat = today_weather_data['coord']['lat']
+    except KeyError:
+        raise NotFound("There are no coordinates in weather data")
 
-    forecast_url = "http://api.openweathermap.org/data/2.5/onecall"
     try:
         forecast_resp = requests.get(forecast_url, {'lat': lat, 'lon': lon,
-                                                    'appid': appid})
+                                                    'appid': APPID})
     except requests.exceptions.RequestException as e:
         raise e.response.text
 
-    return weather_data.weather_data(weather_resp.json(), forecast_resp.json())
+    return weather_data.weather_data(today_weather_data, forecast_resp.json())
 
 
 class OpenWeatherAdapter:
@@ -51,8 +55,7 @@ class OpenWeatherAdapter:
         weather_data = {}
 
         if today_data['cod'] == 200:
-
-            timezone_delta = timedelta(hours=today_data['timezone']/3600)
+            timezone_delta = timedelta(hours=today_data['timezone'] / 3600)
 
             city_time = datetime.now() + timezone_delta
             weather_data = {
@@ -75,7 +78,7 @@ class OpenWeatherAdapter:
 
         data = {}
         if forecasts_data:
-            timezone_delta = timedelta(hours=forecasts_data['timezone_offset']/3600)
+            timezone_delta = timedelta(hours=forecasts_data['timezone_offset'] / 3600)
 
             forecast_data = forecasts_data['daily'][0]
             data = {
@@ -96,6 +99,3 @@ class OpenWeatherAdapter:
         data = self.today_weather(today_data)
         data['forecast'] = self.forecast_weather(forecast_data)
         return data
-
-
-
