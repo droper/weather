@@ -1,76 +1,100 @@
 """Adapters"""
-from datetime import datetime
+from datetime import datetime, timedelta
+import requests
+
+
+def open_weather_retrieve(country, city):
+    """Retrieve the data from Open Weather"""
+
+    appid = "1508a9a4840a5574c822d70ca2132032"
+
+    weather_data = OpenWeatherAdapter()
+
+    # Weather data
+    weather_url = "http://api.openweathermap.org/data/2.5/weather"
+    try:
+        weather_resp = requests.get(weather_url, {'q': ','.join([city, country]),
+                                                  'appid': appid})
+    except requests.exceptions.RequestException as e:
+        raise e.response.text
+
+    # Forecast data
+    today_weather_data = weather_data.today_weather(weather_resp.json())
+    if 'geo_coordinates' in today_weather_data:
+        lat, lon = today_weather_data['geo_coordinates']
+    else:
+        return {"message": "No coordinates"}
+
+    forecast_url = "http://api.openweathermap.org/data/2.5/onecall"
+    try:
+        forecast_resp = requests.get(forecast_url, {'lat': lat, 'lon': lon,
+                                                    'appid': appid})
+    except requests.exceptions.RequestException as e:
+        raise e.response.text
+
+    return weather_data.weather_data(weather_resp.json(), forecast_resp.json())
 
 
 class OpenWeatherAdapter:
     """Adapter for the OpenWeatherMap api"""
 
-    def __init__(self, today_data, forecast_data):
-        self.today_data = today_data
-        self.forecast_data = forecast_data
+    @staticmethod
+    def timestamp_to_strtime(timestamp, timezone_delta):
+        """Returns a strtime from a timestamp minus the timezone offset"""
 
-    def timestamp_to_strtime(self, timestamp):
-        """Returns a strtime from a timestamp"""
-
-        date = datetime.fromtimestamp(timestamp)
+        date = datetime.fromtimestamp(timestamp) + timezone_delta
         return date.strftime('%H:%M')
 
-    def utc_to_strtime(self, utc_timestamp):
-        """Unix Utc timestamp to """
-
-    def today_weather(self):
+    def today_weather(self, today_data):
         """Generates data from the weather api data"""
 
-        sunset = datetime.fromtimestamp(int(self.today_data['sys']['sunset']))
-        sunset_time = sunset.strftime('%H:%M')
+        weather_data = {}
 
-        sunrise = datetime.fromtimestamp(int(self.today_data['sys']['sunrise']))
-        sunrise_time = sunrise.strftime('%H:%M')
+        if today_data['cod'] == 200:
 
-        timestamp = datetime.utcfromtimestamp(self.today_data['timestamp'])
-        city_time = datetime.fromtimestamp(timestamp) - datetime.utcfromtimestamp(timestamp)
+            timezone_delta = timedelta(hours=today_data['timezone']/3600)
 
-        weather_data = {
-            "location_name": self.today_data['name'] + ', ' + self.today_data['country'],
-            "temperature": str(float(self.today_data['main']['temp']) - 273.15) + ' ºC',
-            "wind": str(self.today_data['speed']) + ' m/s',
-            "cloudiness": self.today_data['weather'][0]['description'],
-            "pressure": str(self.today_data['main']['pressure']) + ' hpa',
-            "humidity": str(self.today_data['main']['humidity']) + '%',
-            "sunrise": sunrise_time,
-            "sunset": sunset_time,
-            "geo_coordinates": [self.today_data["coord"]["lat"], self.today_data["coord"]["lon"]],
-            "requested_time": city_time.strftime('%Y-%m-%d %H:%M:%S')
-        }
+            city_time = datetime.now() + timezone_delta
+            weather_data = {
+                "location_name": today_data['name'] + ', ' + today_data['sys']['country'],
+                "temperature": str(round(float(today_data['main']['temp']) - 273.15)) + ' ºC',
+                "wind": str(today_data['wind']['speed']) + ' m/s',
+                "cloudiness": today_data['weather'][0]['description'],
+                "pressure": str(today_data['main']['pressure']) + ' hpa',
+                "humidity": str(today_data['main']['humidity']) + '%',
+                "sunrise": self.timestamp_to_strtime(int(today_data['sys']['sunrise']), timezone_delta),
+                "sunset": self.timestamp_to_strtime(int(today_data['sys']['sunset']), timezone_delta),
+                "geo_coordinates": [today_data["coord"]["lat"], today_data["coord"]["lon"]],
+                "requested_time": city_time.strftime('%Y-%m-%d %H:%M:%S')
+            }
 
         return weather_data
 
-    def forecast_weather(self):
+    def forecast_weather(self, forecasts_data):
         """Generates data from the forecast data"""
 
-        sunrise = datetime.fromtimestamp(int(self.forecast_data['sunrise']))
-        sunrise_time = sunrise.strftime('%H:%M')
+        data = {}
+        if forecasts_data:
+            timezone_delta = timedelta(hours=forecasts_data['timezone_offset']/3600)
 
-        sunset = datetime.fromtimestamp(int(self.forecast_data['sunset']))
-        sunset_time = sunset.strftime('%H:%M')
+            forecast_data = forecasts_data['daily'][0]
+            data = {
+                "temperature": str(round(float(forecast_data['temp']['day']) - 273.15)) + ' ºC',
+                "wind": str(forecast_data['wind_speed']) + ' m/s',
+                "cloudiness": forecast_data['weather'][0]['description'],
+                "pressure": str(forecast_data['pressure']) + ' hpa',
+                "humidity": str(forecast_data['humidity']) + '%',
+                "sunrise": self.timestamp_to_strtime(int(forecast_data['sunrise']), timezone_delta),
+                "sunset": self.timestamp_to_strtime(int(forecast_data['sunset']), timezone_delta)
+            }
 
-        forecast_data = {
-            "temperature": str(float(self.forecast_data['temp']['day']) - 273.15) + ' ºC',
-            "wind": str(self.forecast_data['wind_speed']) + ' m/s',
-            "cloudiness": self.forecast_data['weather'][0]['description'],
-            "pressure": str(self.forecast_data['main']['pressure']) + ' hpa',
-            "humidity": str(self.forecast_data['main']['humidity']) + '%',
-            "sunrise": sunrise_time,
-            "sunset": sunset_time
-        }
+        return data
 
-        return forecast_data
-
-    def weather_data(self):
+    def weather_data(self, today_data, forecast_data):
         """Returns the weather and forecasted data"""
 
-        data = self.today_data
-        data.append(self.forecast_data)
+        data = self.today_weather(today_data)
+        data['forecast'] = self.forecast_weather(forecast_data)
         return data
 
 
