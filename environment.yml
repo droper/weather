@@ -1,6 +1,6 @@
 name: weather
 channels:
-  - anaconda
+  - anaconda 
   - conda-forge
   - defaults
 dependencies:
