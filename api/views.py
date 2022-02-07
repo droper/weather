@@ -1,3 +1,5 @@
+"""views"""
+
 from django.views.decorators.cache import cache_page
 from django.utils.decorators import method_decorator
 
@@ -5,8 +7,9 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.exceptions import NotFound
 
-from .adapter import open_weather_retrieve
 from weather.settings import CACHE_TTL
+from .factory import ConcreteWeatherApiFactory
+from .client import weather_retrieve
 
 
 class Weather(APIView):
@@ -19,7 +22,7 @@ class Weather(APIView):
         try:
             country = self.request.query_params['country']
             city = self.request.query_params['city']
-        except KeyError:
-            raise NotFound("There is no city or country parameter")
+        except KeyError as country_city_not_exist:
+            raise NotFound("There is no city or country parameter") from country_city_not_exist
 
-        return Response(open_weather_retrieve(country, city))
+        return Response(weather_retrieve(ConcreteWeatherApiFactory(), country, city))

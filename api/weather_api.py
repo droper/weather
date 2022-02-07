@@ -1,4 +1,6 @@
 """Adapters"""
+from abc import ABC, abstractmethod
+
 from datetime import datetime, timedelta
 import requests
 
@@ -7,40 +9,52 @@ from rest_framework.exceptions import NotFound
 from weather.settings import APPID
 
 
-def open_weather_retrieve(country, city):
-    """Retrieve the data from Open Weather"""
+class AbstractWeatherApi(ABC):
+    """
+    Each distinct product of a product family should have a base interface. All
+    variants of the product must implement this interface.
+    """
 
-    weather_data = OpenWeatherAdapter()
+    @abstractmethod
+    def retrieve_data(self, country: str, city: str):
+        pass
+
+    @abstractmethod
+    def weather_data(self, country: str, city: str):
+        pass
+
+
+class OpenWeatherApi(AbstractWeatherApi):
+    """Adapter for the OpenWeatherMap api"""
 
     weather_url = "http://api.openweathermap.org/data/2.5/weather"
     forecast_url = "http://api.openweathermap.org/data/2.5/onecall"
 
-    # Weather data
-    try:
-        weather_resp = requests.get(weather_url, {'q': ','.join([city, country]),
-                                                  'appid': APPID})
-    except requests.exceptions.RequestException as e:
-        raise e.response.text
+    def retrieve_data(self, country, city):
+        """Retrieve weather data from OpenWeatherMap"""
 
-    # Forecast data
-    today_weather_data = weather_resp.json()
-    try:
-        lon = today_weather_data['coord']['lon']
-        lat = today_weather_data['coord']['lat']
-    except KeyError:
-        raise NotFound("There are no coordinates in weather data")
+        # Weather data
+        try:
+            weather_resp = requests.get(self.weather_url, {'q': ','.join([city, country]),
+                                                           'appid': APPID})
+        except requests.exceptions.RequestException as e:
+            raise e.response.text
 
-    try:
-        forecast_resp = requests.get(forecast_url, {'lat': lat, 'lon': lon,
-                                                    'appid': APPID})
-    except requests.exceptions.RequestException as e:
-        raise e.response.text
+        # Forecast data
+        today_weather_data = weather_resp.json()
+        try:
+            lon = today_weather_data['coord']['lon']
+            lat = today_weather_data['coord']['lat']
+        except KeyError as key_not_exist:
+            raise NotFound("There are no coordinates in weather data") from key_not_exist
 
-    return weather_data.weather_data(today_weather_data, forecast_resp.json())
+        try:
+            forecast_resp = requests.get(self.forecast_url, {'lat': lat, 'lon': lon,
+                                                             'appid': APPID})
+        except requests.exceptions.RequestException as e:
+            raise e.response.text
 
-
-class OpenWeatherAdapter:
-    """Adapter for the OpenWeatherMap api"""
+        return today_weather_data, forecast_resp.json()
 
     @staticmethod
     def timestamp_to_strtime(timestamp, timezone_delta):
@@ -65,8 +79,10 @@ class OpenWeatherAdapter:
                 "cloudiness": today_data['weather'][0]['description'],
                 "pressure": str(today_data['main']['pressure']) + ' hpa',
                 "humidity": str(today_data['main']['humidity']) + '%',
-                "sunrise": self.timestamp_to_strtime(int(today_data['sys']['sunrise']), timezone_delta),
-                "sunset": self.timestamp_to_strtime(int(today_data['sys']['sunset']), timezone_delta),
+                "sunrise": self.timestamp_to_strtime(int(today_data['sys']['sunrise']),
+                                                     timezone_delta),
+                "sunset": self.timestamp_to_strtime(int(today_data['sys']['sunset']),
+                                                    timezone_delta),
                 "geo_coordinates": [today_data["coord"]["lat"], today_data["coord"]["lon"]],
                 "requested_time": city_time.strftime('%Y-%m-%d %H:%M:%S')
             }
@@ -77,7 +93,7 @@ class OpenWeatherAdapter:
         """Generates data from the forecast data"""
 
         data = {}
-        if forecasts_data:
+        if 'cod' not in forecasts_data:
             timezone_delta = timedelta(hours=forecasts_data['timezone_offset'] / 3600)
 
             forecast_data = forecasts_data['daily'][0]
@@ -93,9 +109,10 @@ class OpenWeatherAdapter:
 
         return data
 
-    def weather_data(self, today_data, forecast_data):
+    def weather_data(self, country, city):
         """Returns the weather and forecasted data"""
 
+        today_data, forecast_data = self.retrieve_data(country, city)
         data = self.today_weather(today_data)
         data['forecast'] = self.forecast_weather(forecast_data)
         return data
