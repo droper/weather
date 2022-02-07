@@ -16,5 +16,10 @@ class ConcreteWeatherApiFactory(AbstractWeatherApiFactory):
     """Constructor of Weather Api classes"""
 
     def create_weather_api(self, api_source) -> AbstractWeatherApi:
+        """
+        Return the weather api
+
+        :param api_source: type of api source
+        """
         if api_source == "OPEN_WEATHER":
             return OpenWeatherApi()

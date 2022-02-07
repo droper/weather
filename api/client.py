@@ -5,7 +5,12 @@ from rest_framework.exceptions import NotFound
 
 
 def weather_retrieve(api_factory, country, city):
-    """Retrieve the data from the weather api"""
+    """Retrieve the data from the weather api
+
+    :param api_factory: Weather api factory
+    :param country: country code
+    :param city: city name
+    """
 
     weather_data = api_factory.create_weather_api(API_SOURCE)
 

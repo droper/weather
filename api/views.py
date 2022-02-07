@@ -1,5 +1,4 @@
 """views"""
-
 from django.views.decorators.cache import cache_page
 from django.utils.decorators import method_decorator
 
@@ -17,7 +16,10 @@ class Weather(APIView):
 
     @method_decorator(cache_page(CACHE_TTL))
     def get(self, request):
-        """GET endpoint"""
+        """
+        GET endpoint, obtain country and city and returns
+        the formatted weather response.
+        """
 
         try:
             country = self.request.query_params['country']

@@ -10,10 +10,7 @@ from weather.settings import APPID
 
 
 class AbstractWeatherApi(ABC):
-    """
-    Each distinct product of a product family should have a base interface. All
-    variants of the product must implement this interface.
-    """
+    """Abstract class for the Weather APIs"""
 
     @abstractmethod
     def retrieve_data(self, country: str, city: str):
@@ -33,14 +30,14 @@ class OpenWeatherApi(AbstractWeatherApi):
     def retrieve_data(self, country, city):
         """Retrieve weather data from OpenWeatherMap"""
 
-        # Weather data
+        # Retrieve today weather data
         try:
             weather_resp = requests.get(self.weather_url, {'q': ','.join([city, country]),
                                                            'appid': APPID})
         except requests.exceptions.RequestException as e:
             raise e.response.text
 
-        # Forecast data
+        # Retrieve forecast data
         today_weather_data = weather_resp.json()
         try:
             lon = today_weather_data['coord']['lon']
@@ -58,13 +55,17 @@ class OpenWeatherApi(AbstractWeatherApi):
 
     @staticmethod
     def timestamp_to_strtime(timestamp, timezone_delta):
-        """Returns a strtime from a timestamp minus the timezone offset"""
+        """Returns a strtime from a timestamp minus the timezone offset
+
+        :param timestamp: the actual timestamp
+        :param timezone_delta: timezone offset
+        """
 
         date = datetime.fromtimestamp(timestamp) + timezone_delta
         return date.strftime('%H:%M')
 
     def today_weather(self, today_data):
-        """Generates data from the weather api data"""
+        """Format data from today weather api"""
 
         weather_data = {}
 
@@ -90,7 +91,7 @@ class OpenWeatherApi(AbstractWeatherApi):
         return weather_data
 
     def forecast_weather(self, forecasts_data):
-        """Generates data from the forecast data"""
+        """Formats data from the forecast weather"""
 
         data = {}
         if 'cod' not in forecasts_data:
