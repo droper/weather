@@ -1,6 +1,5 @@
 name: weather
 channels:
-  - anaconda
   - conda-forge
   - defaults
 dependencies:
@@ -8,9 +7,9 @@ dependencies:
   - _openmp_mutex=4.5=1_gnu
   - asgiref=3.5.0=pyhd8ed1ab_0
   - bzip2=1.0.8=h7f98852_4
-  - ca-certificates=2020.10.14=0
-  - certifi=2020.6.20=pyhd3eb1b0_3
+  - ca-certificates=2021.10.8=ha878542_0
   - charset-normalizer=2.0.4=pyhd3eb1b0_0
+  - django-environ=0.4.5=py_1
   - djangorestframework=3.13.1=pyhd8ed1ab_0
   - idna=3.3=pyhd3eb1b0_0
   - ld_impl_linux-64=2.36.1=hea4e1c9_2
@@ -30,6 +29,7 @@ dependencies:
   - pytz=2021.3=pyhd8ed1ab_0
   - readline=8.1=h46c0cb4_0
   - requests=2.27.1=pyhd3eb1b0_0
+  - six=1.16.0=pyh6c4a22f_0
   - sqlite=3.37.0=h9cd32fc_0
   - sqlparse=0.4.2=pyhd8ed1ab_0
   - tk=8.6.11=h27826a3_1
@@ -43,6 +43,7 @@ dependencies:
     - amqp==5.0.9
     - billiard==3.6.4.0
     - brotlipy==0.7.0
+    - certifi==2021.10.8
     - cffi==1.15.0
     - click==8.0.3
     - click-didyoumean==0.3.0
@@ -59,7 +60,6 @@ dependencies:
     - pysocks==1.7.1
     - redis==4.1.2
     - setuptools==59.6.0
-    - six==1.16.0
     - vine==5.0.0
     - wcwidth==0.2.5
     - wrapt==1.13.3
