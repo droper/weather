@@ -9,3 +9,5 @@ Running instructions:
 * cd ..
 * python manage runserver
 * With the browser go to http://127.0.0.1:8000/api?country=co&city=Bogota
+
+* To run the tests: python manage.py test
