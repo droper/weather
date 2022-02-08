@@ -11,6 +11,7 @@ from .factory import ConcreteWeatherApiFactory
 
 
 class Weather(APITestCase):
+    """Tests cases"""
 
     def test_get(self):
         response = self.client.get('http://127.0.0.1:8000/api',
@@ -26,10 +27,10 @@ class Weather(APITestCase):
     def test_weather_retrieve(self):
         bogota = weather_retrieve(ConcreteWeatherApiFactory(), 'co', 'Bogota')
         lima = weather_retrieve(ConcreteWeatherApiFactory(), 'pe', 'Lima')
-        assert (bogota['location_name'] == 'Bogota, CO')
-        assert (bogota['geo_coordinates'] == [4.6097, -74.0817])
-        assert (lima['location_name'] == 'Lima, PE')
-        assert (lima['geo_coordinates'] == [-12.0432, -77.0282])
+        self.assertEqual(bogota['location_name'], 'Bogota, CO')
+        self.assertEqual(bogota['geo_coordinates'], [4.6097, -74.0817])
+        self.assertEqual(lima['location_name'], 'Lima, PE')
+        self.assertEqual(lima['geo_coordinates'], [-12.0432, -77.0282])
 
     def test_create_weather_api(self):
         obj = ConcreteWeatherApiFactory()
